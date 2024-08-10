@@ -1,3 +1,4 @@
+import argparse
 import functools
 import tempfile
 
@@ -17,14 +18,21 @@ import zarr
 XbeamThreadMap = xbeam._src.threadmap.ThreadMap
 
 
-def create_pipeline(start_time: pd.Timestamp, end_time: pd.Timestamp):
+def create_pipeline(
+    start_time: pd.Timestamp, end_time: pd.Timestamp, beam_args: list[str]
+):
     template_ds, target_chunks = make_template_dataset(start_time, end_time)
 
-    with beam.Pipeline() as p:
+    beam_options = beam.options.pipeline_options.PipelineOptions(
+        beam_args, save_main_session=True
+    )
+
+    with beam.Pipeline(options=beam_options) as p:
         (
             p
             | beam.Create(source_file_keys(template_ds))
-            | XbeamThreadMap(
+            | "DownloadAndReadSourceFile"
+            >> XbeamThreadMap(
                 lambda key: download_and_load_source_file(key, template_ds)
             )
             | xbeam.ConsolidateChunks(
@@ -33,7 +41,7 @@ def create_pipeline(start_time: pd.Timestamp, end_time: pd.Timestamp):
             | xbeam.SplitChunks(
                 {dim: target_chunks[dim] for dim in ["latitude", "longitude"]}
             )
-            | xbeam.ChunksToZarr("data/test9.zarr", template_ds)
+            | xbeam.ChunksToZarr("data/test10.zarr", template_ds)
         )
 
 
@@ -133,10 +141,9 @@ def download_and_load_source_file(
     init_date_str = offset_ds["init_time"].dt.strftime("%Y%m%d").item()
     init_hour_str = offset_ds["init_time"].dt.strftime("%H").item()
 
-    # or gefs.20200927/00/atmos/pgrb2sp25/geavg.t00z.pgrb2s.0p25.f000
     url = (
         "https://storage.googleapis.com/gfs-ensemble-forecast-system/"
-        "https://noaa-gefs-pds.s3.amazonaws.com/"
+        # "https://noaa-gefs-pds.s3.amazonaws.com/"
         f"gefs.{init_date_str}/{init_hour_str}/atmos/pgrb2sp25/"
         f"geavg.t{init_hour_str}z.pgrb2s.0p25.f{lead_time_hours:03.0f}"
     )
@@ -189,4 +196,10 @@ def download(url: str, local_path: str):
 
 
 if __name__ == "__main__":
-    create_pipeline(pd.Timestamp("2024-01-01T00:00"), pd.Timestamp("2024-01-01T06:00"))
+    parser = argparse.ArgumentParser()
+
+    pipeline_args, beam_args = parser.parse_known_args()
+
+    create_pipeline(
+        pd.Timestamp("2024-01-01T00:00"), pd.Timestamp("2024-01-01T06:00"), beam_args
+    )

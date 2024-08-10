@@ -1,5 +1,6 @@
 apache-beam[gcp]
+cfgrib
 eccodes
-xarray[complete]
+xarray[io,accel,parallel,viz]
 xarray-beam
 rioxarray
