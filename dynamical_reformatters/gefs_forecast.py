@@ -1,11 +1,9 @@
-import argparse
 import functools
 import tempfile
 
 import apache_beam as beam
 import cfgrib
 import dask
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import requests
@@ -23,9 +21,7 @@ def create_pipeline(
 ):
     template_ds, target_chunks = make_template_dataset(start_time, end_time)
 
-    beam_options = beam.options.pipeline_options.PipelineOptions(
-        beam_args, save_main_session=True
-    )
+    beam_options = beam.options.pipeline_options.PipelineOptions(beam_args)
 
     with beam.Pipeline(options=beam_options) as p:
         (
@@ -193,13 +189,3 @@ def download(url: str, local_path: str):
         with open(local_path, "wb") as file:
             for chunk in response.iter_content(chunk_size=None):
                 file.write(chunk)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-
-    pipeline_args, beam_args = parser.parse_known_args()
-
-    create_pipeline(
-        pd.Timestamp("2024-01-01T00:00"), pd.Timestamp("2024-01-01T06:00"), beam_args
-    )
