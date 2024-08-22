@@ -1,5 +1,6 @@
 FROM gcr.io/dataflow-templates-base/python310-template-launcher-base:20240628-rc00 AS template_launcher
-FROM apache/beam_python3.10_sdk:2.58.1
+# TODO update this image, there's a known gcs read bug, but it doesn't impact us currently
+FROM apache/beam_python3.10_sdk:2.58.1 
 
 ARG WORKDIR=/pipeline
 WORKDIR ${WORKDIR}
